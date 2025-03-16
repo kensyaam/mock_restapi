@@ -3,9 +3,18 @@ import time
 import http.server
 import socketserver
 import os
+import argparse
+import signal
+import sys
+import threading
+
+# コマンドライン引数の処理
+parser = argparse.ArgumentParser(description="Mock REST API Server")
+parser.add_argument("--port", type=int, default=8000, help="Port number to run the server on (default: 8000)")
+args = parser.parse_args()
 
 # 設定
-PORT = 8000
+PORT = args.port
 BASE_DIR = "data"  # JSONファイルが格納されているディレクトリ
 DELAY_FILE = "delay.txt"  # 遅延秒数を指定するファイル
 
@@ -36,7 +45,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         time.sleep(delay)  # 遅延を適用
 
         # リクエストされたパスに対応するJSONファイルの取得と送信
-        json_file_path = os.path.join(BASE_DIR, self.path.lstrip("/") + ".json")
+        json_file_path = os.path.join(BASE_DIR, self.path.lstrip("/").split('?')[0] + ".json")
+        print(f"JSON file path: {json_file_path}")
         try:
             with open(json_file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -59,6 +69,13 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
 # `ThreadingTCPServer` を使用して並列処理を可能にする
 class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
+
+def signal_handler(sig, frame):
+    print('Shutting down server...')
+    threading.Thread(target=httpd.shutdown).start()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 # サーバー起動
 with ThreadingTCPServer(("0.0.0.0", PORT), MyHandler) as httpd:
