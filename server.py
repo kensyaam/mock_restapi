@@ -54,7 +54,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
+            # 空白を除去した JSON 文字列に変換して送信
+            self.wfile.write(json.dumps(data, separators=(',', ':'), ensure_ascii=False).encode("utf-8"))
         except FileNotFoundError:
             self.send_response(404)
             self.send_header("Content-Type", "text/plain")
